@@ -4,6 +4,8 @@ import "base:runtime"
 import "core:fmt"
 import win "core:sys/windows"
 
+running: bool;
+
 WNDPROC :: proc "stdcall" (window: win.HWND, message: u32, w_param: uintptr, l_param: int) -> int {
 	context = runtime.default_context()
 
@@ -13,8 +15,11 @@ WNDPROC :: proc "stdcall" (window: win.HWND, message: u32, w_param: uintptr, l_p
 	case win.WM_SIZE:
 		fmt.println("WM_SIZE")
 		break
+	case win.WM_CLOSE:
+		running = false;
+		break
 	case win.WM_DESTROY:
-		fmt.println("WM_SIZE")
+		running = false;
 		break
 	case win.WM_ACTIVATEAPP:
 		fmt.println("WM_SIZE")
@@ -78,9 +83,15 @@ main :: proc() {
 	if window_handle != nil {
 		message: win.MSG
 
-		for win.GetMessageW(&message, nil, 0, 0) > 0 {
-			win.TranslateMessage(&message)
-			win.DispatchMessageW(&message)
+		running = true
+
+		for running {
+			if win.GetMessageW(&message, nil, 0, 0) > 0 {
+				win.TranslateMessage(&message)
+				win.DispatchMessageW(&message)
+			} else {
+				break
+			}
 		}
 	}
 }
