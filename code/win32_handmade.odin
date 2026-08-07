@@ -6,13 +6,19 @@ import win "core:sys/windows"
 
 running: bool
 bitmap_info: win.BITMAPINFO = {}
-bitmap_memory: ^win.PVOID
+bitmap_memory: win.PVOID
 bitmap_handle: win.HBITMAP
+bitmap_device_context: win.HDC
 
 win32_resize_dib_section :: proc(width: i32, height: i32) {
 	if bitmap_handle != nil {
-		win.DeleteObject(bitmap_handle)
+		win.DeleteObject(cast(win.HGDIOBJ)(bitmap_handle))
 	}
+
+	if bitmap_device_context == nil {
+		bitmap_device_context = win.CreateCompatibleDC(nil)
+	}
+
 	bitmap_info.bmiHeader.biSize = size_of(bitmap_info.bmiHeader)
 	bitmap_info.bmiHeader.biWidth = width
 	bitmap_info.bmiHeader.biHeight = height
@@ -25,24 +31,22 @@ win32_resize_dib_section :: proc(width: i32, height: i32) {
 	bitmap_info.bmiHeader.biClrUsed = 0
 	bitmap_info.bmiHeader.biClrImportant = 0
 
-	device_context: win.HDC = win.CreateCompatibleDC(0)
 	bitmap_handle = win.CreateDIBSection(
-		device_context,
+		bitmap_device_context,
 		&bitmap_info,
 		win.DIB_RGB_COLORS,
 		&bitmap_memory,
 		nil,
 		0
 	)
-
-	win.ReleaseDC(device_context)
 }
 
 win32_update_window :: proc(device_context: win.HDC, x: i32, y: i32, width: i32, height: i32) {
 	win.StretchDIBits(device_context,
-		x, y, width, y,
-	 	x, y, width, y,
-		nil, nil,
+		x, y, width, height,
+	 	x, y, width, height,
+		bitmap_memory,
+		&bitmap_info,
 		win.DIB_RGB_COLORS, win.SRCCOPY)
 }
 
@@ -70,7 +74,7 @@ WNDPROC :: proc "stdcall" (window: win.HWND, message: u32, w_param: uintptr, l_p
 		running = false
 		break
 	case win.WM_ACTIVATEAPP:
-		fmt.println("WM_SIZE")
+		fmt.println("WM_ACTIVATEAPP")
 		break
 	case win.WM_PAINT:
 		paint: win.PAINTSTRUCT = {}
