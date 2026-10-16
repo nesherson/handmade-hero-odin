@@ -38,6 +38,24 @@ Wndproc :: proc "stdcall" (
 		fmt.println("WM_ACTIVATEAPP")
 
 		break
+	case win.WM_PAINT:
+		paint: win.PAINTSTRUCT = {}
+
+		// paint.rcPaint.left = 0
+		// paint.rcPaint.top = 0
+		// paint.rcPaint.right
+		// paint.rcPaint.bottom
+
+		x := paint.rcPaint.left
+		y := paint.rcPaint.top
+		width := paint.rcPaint.right - x
+		height := paint.rcPaint.bottom - y
+		device_ctx: win.HDC = win.BeginPaint(window, &paint)
+
+		win.PatBlt(device_ctx, x, y, width, height, win.WHITENESS)
+		win.EndPaint(window, &paint)
+
+		break
 	case:
 		fmt.println("default")
 
@@ -100,7 +118,15 @@ main :: proc() {
 	)
 
 	if (window_handle != nil) {
+		// Contains message information from a thread's message queue
+		message := win.MSG{}
 
+		// GetMessageW - Retrieves a message from the calling thread's message queue
+		for (win.GetMessageW(&message, nil, 0, 0) != win.WM_QUIT) {
+
+			// Translates virtual-key messages into character messages
+			win.TranslateMessage(&message)
+			win.DispatchMessageW(&message)
+		}
 	}
-
 }
